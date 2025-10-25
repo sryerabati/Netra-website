@@ -1,43 +1,9 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
-import { UploadCard } from '../components/UploadCard';
-import { AnalyzeButton } from '../components/AnalyzeButton';
-import { ResultCard } from '../components/ResultCard';
 import { Footer } from '../components/Footer';
-import { analyzeImage } from '../services/api';
-
-interface AnalysisResult {
-  prediction: string;
-  confidence: number;
-}
 
 export default function Landing() {
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-
-  const handleAnalyze = async () => {
-    if (!selectedImage) return;
-
-    setIsAnalyzing(true);
-    setResult(null);
-
-    try {
-      const analysisResult = await analyzeImage(selectedImage);
-      setResult(analysisResult);
-    } catch (error) {
-      console.error('Analysis failed:', error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleReset = () => {
-    setSelectedImage(null);
-    setResult(null);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-light-bg to-light-bg-end dark:from-dark-bg dark:to-dark-bg-end transition-colors duration-500">
@@ -78,28 +44,6 @@ export default function Landing() {
           </motion.div>
         </section>
 
-        <UploadCard
-          onImageSelect={setSelectedImage}
-          selectedImage={selectedImage}
-          onClear={handleReset}
-        />
-
-        {selectedImage && !result && (
-          <AnalyzeButton
-            onClick={handleAnalyze}
-            disabled={!selectedImage || isAnalyzing}
-            isLoading={isAnalyzing}
-          />
-        )}
-
-        {result && (
-          <ResultCard
-            prediction={result.prediction}
-            confidence={result.confidence}
-            onReset={handleReset}
-          />
-        )}
-
         <motion.section
           id="about"
           initial={{ opacity: 0 }}
@@ -136,9 +80,9 @@ export default function Landing() {
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-light-accent/20 to-light-accent-hover/20 dark:from-dark-accent/20 dark:to-dark-accent/10 flex items-center justify-center mx-auto mb-3">
                   <span className="text-2xl font-bold text-light-accent dark:text-dark-accent">1</span>
                 </div>
-                <h3 className="font-semibold text-light-text dark:text-dark-text mb-2">Upload Image</h3>
+                <h3 className="font-semibold text-light-text dark:text-dark-text mb-2">Nurses Upload Scans</h3>
                 <p className="text-sm text-light-text/60 dark:text-dark-text/60">
-                  Upload a retinal fundus image in JPG, PNG, or JPEG format
+                  Healthcare staff upload retinal fundus images to the system
                 </p>
               </div>
               <div className="text-center">
@@ -147,16 +91,16 @@ export default function Landing() {
                 </div>
                 <h3 className="font-semibold text-light-text dark:text-dark-text mb-2">AI Analysis</h3>
                 <p className="text-sm text-light-text/60 dark:text-dark-text/60">
-                  Our deep learning model processes the image and identifies patterns
+                  Our deep learning model processes images and identifies patterns
                 </p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-light-accent/20 to-light-accent-hover/20 dark:from-dark-accent/20 dark:to-dark-accent/10 flex items-center justify-center mx-auto mb-3">
                   <span className="text-2xl font-bold text-light-accent dark:text-dark-accent">3</span>
                 </div>
-                <h3 className="font-semibold text-light-text dark:text-dark-text mb-2">Get Results</h3>
+                <h3 className="font-semibold text-light-text dark:text-dark-text mb-2">Doctor Review</h3>
                 <p className="text-sm text-light-text/60 dark:text-dark-text/60">
-                  Receive detailed predictions with confidence scores
+                  Doctors review results and provide clinical guidance
                 </p>
               </div>
             </div>
