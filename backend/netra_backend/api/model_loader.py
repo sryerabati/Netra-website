@@ -67,7 +67,7 @@ def load_model():
 
         if 'backbone' in first_key:
             print("Detected EfficientNet architecture with custom wrapper")
-            model = timm.create_model('efficientnet_b0', pretrained=False, num_classes=5)
+            model = timm.create_model('efficientnet_b3', pretrained=False, num_classes=5)
 
             # Map the keys from the custom wrapper to timm's structure
             new_state_dict = {}
@@ -86,7 +86,7 @@ def load_model():
                 print(f"Unexpected keys (ignored): {unexpected_keys[:5]}...")
         else:
             print("Detected standard architecture, loading directly")
-            model = timm.create_model('efficientnet_b0', pretrained=False, num_classes=5)
+            model = timm.create_model('efficientnet_b3', pretrained=False, num_classes=5)
             model.load_state_dict(state_dict, strict=False)
 
         model.eval()
