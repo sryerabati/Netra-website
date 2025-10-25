@@ -136,7 +136,7 @@ def upload_scan(request):
 
         if not scan.ai_prediction:
             scan.ai_prediction = result_left.get('prediction')
-            scan.ai_confidence = result_left.get('confidence')
+            scan.ai_confidence = None
             scan.ai_details = result_left
 
     if right_eye:
@@ -150,7 +150,7 @@ def upload_scan(request):
 
         if not scan.ai_prediction:
             scan.ai_prediction = result_right.get('prediction')
-            scan.ai_confidence = result_right.get('confidence')
+            scan.ai_confidence = None
             scan.ai_details = result_right
 
     scan.save()

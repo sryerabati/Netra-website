@@ -20,7 +20,7 @@ interface Scan {
   nurse: User;
   doctor: User;
   ai_prediction: string;
-  ai_confidence: number;
+  ai_confidence: number | null;
   ai_details: any;
   priority: string;
   status: string;

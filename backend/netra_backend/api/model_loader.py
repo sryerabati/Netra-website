@@ -1,9 +1,9 @@
 import random
+import os
 
 try:
     import torch
     import torch.nn as nn
-    import torch.nn.functional as F
     from torchvision import models, transforms
     from PIL import Image
     TORCH_AVAILABLE = True
@@ -24,19 +24,30 @@ else:
 # ----- LOAD MODEL -----
 def load_model():
     """
-    Loads your trained PyTorch model from a .pth file.
-    Must match the same architecture you used during training.
+    Loads the trained PyTorch model from netra_dr_best.pth.
+    Uses MobileNetV2 architecture fine-tuned for 5 classes.
     """
     if not TORCH_AVAILABLE:
+        print("⚠️  PyTorch not available. Using mock predictions.")
         return None
 
     try:
-        # Example: MobileNetV2 fine-tuned for 5 classes
+        model_path = os.path.join(os.path.dirname(__file__), "netra_dr_best.pth")
+
+        if not os.path.exists(model_path):
+            print(f"⚠️  Model file not found at {model_path}. Using mock predictions.")
+            return None
+
+        # MobileNetV2 architecture for 5-class classification
         model = models.mobilenet_v2(weights=None)
         model.classifier[1] = nn.Linear(model.last_channel, 5)
-        model.load_state_dict(torch.load("api/netra_model.pth", map_location=DEVICE))
+
+        # Load the trained weights
+        model.load_state_dict(torch.load(model_path, map_location=DEVICE))
         model.eval()
         model.to(DEVICE)
+
+        print(f"✓ Model loaded successfully from {model_path}")
         return model
     except Exception as e:
         print(f"⚠️  Could not load model: {e}. Using mock predictions.")
@@ -65,23 +76,33 @@ def preprocess_image(image_file):
 # ----- PREDICTION FUNCTION -----
 def predict_image(model, image_file):
     """
-    Runs inference on the uploaded image and returns class + confidence.
+    Runs inference on the uploaded image and returns the predicted class (0-4).
+    Model outputs: 0=No DR, 1=Mild, 2=Moderate, 3=Severe, 4=Proliferative DR
     Uses mock predictions if PyTorch is not available (for demo/testing).
     """
     # If PyTorch is not available or model not loaded, return mock prediction
     if not TORCH_AVAILABLE or model is None:
+        pred_class = random.randint(0, 4)
         return {
-            "prediction": random.choice(LABELS),
-            "confidence": round(random.uniform(75.0, 95.0), 2)
+            "prediction": LABELS[pred_class],
+            "prediction_class": pred_class
         }
 
-    tensor = preprocess_image(image_file).to(DEVICE)
-    with torch.no_grad():
-        outputs = model(tensor)
-        probs = F.softmax(outputs, dim=1)
-        conf, pred = torch.max(probs, 1)
+    try:
+        tensor = preprocess_image(image_file).to(DEVICE)
+        with torch.no_grad():
+            outputs = model(tensor)
+            pred = torch.argmax(outputs, dim=1)
+            pred_class = pred.item()
 
-    return {
-        "prediction": LABELS[pred.item()],
-        "confidence": round(float(conf.item()) * 100, 2)
-    }
+        return {
+            "prediction": LABELS[pred_class],
+            "prediction_class": pred_class
+        }
+    except Exception as e:
+        print(f"⚠️  Prediction error: {e}. Using fallback.")
+        pred_class = random.randint(0, 4)
+        return {
+            "prediction": LABELS[pred_class],
+            "prediction_class": pred_class
+        }

@@ -4,29 +4,32 @@ import { useState } from 'react';
 
 interface ResultCardProps {
   prediction: string;
-  confidence: number;
   onReset: () => void;
 }
 
-export const ResultCard = ({ prediction, confidence, onReset }: ResultCardProps) => {
+export const ResultCard = ({ prediction, onReset }: ResultCardProps) => {
   const [showHeatmap, setShowHeatmap] = useState(false);
 
-  const isHealthy = prediction.toLowerCase().includes('no') ||
-                    prediction.toLowerCase().includes('normal') ||
-                    prediction.toLowerCase().includes('healthy');
+  const isHealthy = prediction.toLowerCase().includes('no');
 
   const getSeverityColor = () => {
-    if (isHealthy) return 'text-green-500';
-    if (confidence > 0.8) return 'text-red-500';
-    if (confidence > 0.5) return 'text-orange-500';
-    return 'text-yellow-500';
+    const pred = prediction.toLowerCase();
+    if (pred.includes('no')) return 'text-green-500';
+    if (pred.includes('proliferative')) return 'text-red-600';
+    if (pred.includes('severe')) return 'text-red-500';
+    if (pred.includes('moderate')) return 'text-orange-500';
+    if (pred.includes('mild')) return 'text-yellow-500';
+    return 'text-gray-500';
   };
 
   const getSeverityBg = () => {
-    if (isHealthy) return 'from-green-500/20 to-green-600/20';
-    if (confidence > 0.8) return 'from-red-500/20 to-red-600/20';
-    if (confidence > 0.5) return 'from-orange-500/20 to-orange-600/20';
-    return 'from-yellow-500/20 to-yellow-600/20';
+    const pred = prediction.toLowerCase();
+    if (pred.includes('no')) return 'from-green-500/20 to-green-600/20';
+    if (pred.includes('proliferative')) return 'from-red-600/20 to-red-700/20';
+    if (pred.includes('severe')) return 'from-red-500/20 to-red-600/20';
+    if (pred.includes('moderate')) return 'from-orange-500/20 to-orange-600/20';
+    if (pred.includes('mild')) return 'from-yellow-500/20 to-yellow-600/20';
+    return 'from-gray-500/20 to-gray-600/20';
   };
 
   return (
@@ -67,38 +70,11 @@ export const ResultCard = ({ prediction, confidence, onReset }: ResultCardProps)
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-light-text/70 dark:text-dark-text/70">
-                Prediction
+                Diagnosis
               </span>
               <span className={`text-lg font-semibold ${getSeverityColor()}`}>
                 {prediction}
               </span>
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-light-text/70 dark:text-dark-text/70">
-                Confidence Score
-              </span>
-              <span className="text-lg font-semibold text-light-text dark:text-dark-text">
-                {(confidence * 100).toFixed(1)}%
-              </span>
-            </div>
-
-            <div className="relative w-full h-4 bg-white/20 dark:bg-white/10 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${confidence * 100}%` }}
-                transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
-                className={`h-full bg-gradient-to-r ${getSeverityBg().replace('/20', '/60')}`}
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
-            </div>
-
-            <div className="flex items-center justify-between mt-2 text-xs text-light-text/50 dark:text-dark-text/50">
-              <span>Low</span>
-              <span>Medium</span>
-              <span>High</span>
             </div>
           </div>
 
