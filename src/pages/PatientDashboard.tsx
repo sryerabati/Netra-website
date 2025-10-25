@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Scan, ScanImage, DoctorNote, Profile } from '../lib/supabase';
-import { LogOut, Eye, AlertCircle, Calendar, User, FileText, TrendingUp } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { LogOut, Eye, Calendar, User, FileText, TrendingUp, UserPlus, Stethoscope, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ScanWithDetails extends Scan {
   scan_images: ScanImage[];
@@ -10,34 +10,47 @@ interface ScanWithDetails extends Scan {
   doctor?: Profile;
 }
 
+interface Subscription {
+  id: string;
+  doctor_id: string;
+  is_active: boolean;
+  doctor?: Profile;
+}
+
 export default function PatientDashboard() {
   const { profile, signOut } = useAuth();
   const [scans, setScans] = useState<ScanWithDetails[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [doctors, setDoctors] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedScan, setSelectedScan] = useState<ScanWithDetails | null>(null);
+  const [showDoctorModal, setShowDoctorModal] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
-    fetchScans();
+    fetchData();
   }, [profile]);
 
-  const fetchScans = async () => {
+  const fetchData = async () => {
     if (!profile) return;
 
-    const { data, error } = await supabase
-      .from('scans')
-      .select(`
-        *,
-        scan_images(*),
-        doctor_notes(*)
-      `)
-      .eq('patient_id', profile.id)
-      .order('created_at', { ascending: false });
+    const [scansRes, subscriptionsRes, doctorsRes] = await Promise.all([
+      supabase
+        .from('scans')
+        .select(`*, scan_images(*), doctor_notes(*)`)
+        .eq('patient_id', profile.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('patient_doctor_subscriptions')
+        .select('*')
+        .eq('patient_id', profile.id)
+        .eq('is_active', true),
+      supabase.from('profiles').select('*').eq('role', 'doctor')
+    ]);
 
-    if (error) {
-      console.error('Error fetching scans:', error);
-    } else {
+    if (scansRes.data) {
       const scansWithDoctors = await Promise.all(
-        (data || []).map(async (scan) => {
+        scansRes.data.map(async (scan) => {
           const { data: doctor } = await supabase
             .from('profiles')
             .select('*')
@@ -48,7 +61,56 @@ export default function PatientDashboard() {
       );
       setScans(scansWithDoctors);
     }
+
+    if (subscriptionsRes.data) {
+      const subsWithDoctors = await Promise.all(
+        subscriptionsRes.data.map(async (sub) => {
+          const { data: doctor } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', sub.doctor_id)
+            .maybeSingle();
+          return { ...sub, doctor };
+        })
+      );
+      setSubscriptions(subsWithDoctors);
+    }
+
+    if (doctorsRes.data) {
+      setDoctors(doctorsRes.data);
+    }
+
     setLoading(false);
+  };
+
+  const subscribeToDoctor = async (doctorId: string) => {
+    if (!profile) return;
+    setSubscribing(true);
+
+    const { error } = await supabase
+      .from('patient_doctor_subscriptions')
+      .insert({
+        patient_id: profile.id,
+        doctor_id: doctorId,
+        is_active: true
+      });
+
+    if (!error) {
+      await fetchData();
+      setShowDoctorModal(false);
+    }
+    setSubscribing(false);
+  };
+
+  const unsubscribeFromDoctor = async (subscriptionId: string) => {
+    const { error } = await supabase
+      .from('patient_doctor_subscriptions')
+      .update({ is_active: false })
+      .eq('id', subscriptionId);
+
+    if (!error) {
+      await fetchData();
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -67,6 +129,9 @@ export default function PatientDashboard() {
       default: return 'text-gray-600 bg-gray-100 dark:bg-gray-900/20';
     }
   };
+
+  const subscribedDoctorIds = subscriptions.map(s => s.doctor_id);
+  const availableDoctors = doctors.filter(d => !subscribedDoctorIds.includes(d.id));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -99,13 +164,69 @@ export default function PatientDashboard() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              My Dashboard
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Manage your doctors and view scan history
+            </p>
+          </div>
+          <button
+            onClick={() => setShowDoctorModal(true)}
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-xl font-medium shadow-lg transition-all flex items-center gap-2"
+          >
+            <UserPlus className="w-5 h-5" />
+            Add Doctor
+          </button>
+        </div>
+
+        {subscriptions.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Stethoscope className="w-5 h-5" />
+              My Doctors
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {subscriptions.map((sub) => (
+                <motion.div
+                  key={sub.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-lg"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
+                        <Stethoscope className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white">
+                          Dr. {sub.doctor?.full_name}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {sub.doctor?.email}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => unsubscribeFromDoctor(sub.id)}
+                      className="text-xs text-red-600 hover:text-red-700 dark:text-red-400"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             My Scans
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            View your retinal screening history and results
-          </p>
+          </h3>
         </div>
 
         {loading ? (
@@ -135,7 +256,7 @@ export default function PatientDashboard() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(scan.priority)}`}>
                         {scan.priority}
                       </span>
@@ -168,7 +289,7 @@ export default function PatientDashboard() {
                         AI Analysis
                       </span>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{scan.ai_prediction}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{scan.ai_prediction}</p>
                     {scan.ai_confidence && (
                       <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                         Confidence: {(scan.ai_confidence * 100).toFixed(1)}%
@@ -194,6 +315,74 @@ export default function PatientDashboard() {
           </div>
         )}
 
+        <AnimatePresence>
+          {showDoctorModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setShowDoctorModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.95 }}
+                className="backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-200/50 dark:border-gray-700/50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                  Subscribe to a Doctor
+                </h3>
+
+                {availableDoctors.length === 0 ? (
+                  <p className="text-gray-600 dark:text-gray-400 text-center py-8">
+                    You're already subscribed to all available doctors
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {availableDoctors.map((doctor) => (
+                      <div
+                        key={doctor.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                            <Stethoscope className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              Dr. {doctor.full_name}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {doctor.email}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => subscribeToDoctor(doctor.id)}
+                          disabled={subscribing}
+                          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 flex items-center gap-2"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Subscribe
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowDoctorModal(false)}
+                  className="mt-6 w-full py-3 px-4 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-xl font-medium transition-all"
+                >
+                  Close
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {selectedScan && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -218,7 +407,7 @@ export default function PatientDashboard() {
                 </div>
                 <button
                   onClick={() => setSelectedScan(null)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-2xl"
                 >
                   ✕
                 </button>
