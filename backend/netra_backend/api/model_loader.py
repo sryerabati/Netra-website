@@ -58,6 +58,18 @@ def _build_model(num_classes: int):
     return model
 
 
+def _unsafe_fallback_allowed() -> bool:
+    """Return whether unsafe torch.load fallback is permitted."""
+
+    value = os.getenv("NETRA_ALLOW_UNSAFE_TORCH_LOAD", "1").strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+def _is_weights_unpickler_error(error: Exception) -> bool:
+    message = str(error)
+    return "WeightsUnpickler" in message or "weights_only load failed" in message
+
+
 def _load_state_dict(model_path: str) -> Optional[torch.nn.Module]:
     """Load the trained PyTorch model, handling different checkpoint formats."""
 
@@ -70,25 +82,41 @@ def _load_state_dict(model_path: str) -> Optional[torch.nn.Module]:
             checkpoint = torch.load(model_path, weights_only=True, **load_kwargs)
         except TypeError:
             # File may contain full objects (e.g. torch.nn.Module). Fall back to default loader.
-            checkpoint = torch.load(model_path, **load_kwargs)
+            checkpoint = torch.load(model_path, weights_only=False, **load_kwargs)
         except Exception as load_error:
             print(
                 "⚠️  Could not load checkpoint safely with torch.load(weights_only=True):"
-                f" {load_error}. Falling back to standard loader."
+                f" {load_error}."
             )
-            try:
-                checkpoint = torch.load(model_path, **load_kwargs)
-            except Exception as unsafe_error:
+            checkpoint = None
+
+            if _unsafe_fallback_allowed():
                 print(
-                    "⚠️  Could not load checkpoint with torch.load:"
-                    f" {unsafe_error}."
+                    "Attempting torch.load with weights_only=False because the checkpoint is"
+                    " trusted. See https://pytorch.org/docs/stable/generated/torch.load.html"
+                    " for details."
                 )
-                checkpoint = None
+                try:
+                    checkpoint = torch.load(model_path, weights_only=False, **load_kwargs)
+                except Exception as unsafe_error:
+                    print(
+                        "⚠️  Could not load checkpoint with torch.load(weights_only=False):"
+                        f" {unsafe_error}."
+                    )
+
+                    if _is_weights_unpickler_error(unsafe_error):
+                        print(
+                            "ℹ️  If this checkpoint uses custom modules, allowlist them with"
+                            " torch.serialization.add_safe_globals([...]) before loading."
+                        )
     else:
         try:
-            checkpoint = torch.load(model_path, **load_kwargs)
+            checkpoint = torch.load(model_path, weights_only=False, **load_kwargs)
         except Exception as load_error:
-            print(f"⚠️  Could not load checkpoint with torch.load: {load_error}.")
+            print(
+                "⚠️  Could not load checkpoint with torch.load(weights_only=False):"
+                f" {load_error}."
+            )
             checkpoint = None
 
     if checkpoint is None:
