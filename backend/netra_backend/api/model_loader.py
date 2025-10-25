@@ -209,7 +209,6 @@ def preprocess_image(image_file):
         return None, {}
 
     image = Image.open(image_file).convert("RGB")
-    print(f"Original image size: {image.size}")
 
     np_img = np.array(image)
     np_img = _crop_to_fundus(np_img)
@@ -228,7 +227,6 @@ def preprocess_image(image_file):
     ])
 
     tensor = transform(processed_image).unsqueeze(0)
-    print(f"Preprocessed tensor shape: {tensor.shape}")
     return tensor, qc
 
 
@@ -244,20 +242,21 @@ def predict_image(model, image_file):
 
     tensor, qc = preprocess_image(image_file)
     tensor = tensor.to(DEVICE)
+
+    file_name = getattr(image_file, "name", "uploaded_image")
+    print(f"File: {file_name}")
+
     with torch.no_grad():
         outputs = model(tensor)
-        print(f"Model raw outputs: {outputs}")
-        print(f"Output shape: {outputs.shape}")
 
         # Apply softmax to get probabilities
         probabilities = torch.nn.functional.softmax(outputs, dim=1)
-        print(f"Probabilities: {probabilities}")
 
         pred = torch.argmax(outputs, dim=1)
         pred_class = pred.item()
         confidence = probabilities[0][pred_class].item()
 
-        print(f"Predicted class: {pred_class} ({LABELS[pred_class]})")
+        print(f"Predicted class: {LABELS[pred_class]}")
         print(f"Confidence: {confidence:.4f}")
 
     return {
