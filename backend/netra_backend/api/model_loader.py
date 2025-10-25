@@ -255,7 +255,7 @@ def predict_image(model, image_file):
         pred_class = pred.item()
         confidence = float(probabilities[0][pred_class].item())
 
-        print(f"Predicted class: {LABELS[pred_class]}")
+        print(f"Predicted class: {pred_class}")
         print(f"Confidence: {confidence:.4f}")
 
     return {
