@@ -10,16 +10,11 @@ except ImportError:
     TF_AVAILABLE = False
     print("⚠️  TensorFlow not installed. Model predictions will not work.")
 
-# ----- SETTINGS -----
 IMG_SIZE = 224
 
-# IMPORTANT: These labels MUST match the exact order used during training
-# Common DR datasets use this order (APTOS 2019, EyePACS):
-# 0 = No DR, 1 = Mild, 2 = Moderate, 3 = Severe, 4 = Proliferative DR
 LABELS = ['No DR', 'Mild', 'Moderate', 'Severe', 'Proliferative DR']
 
 
-# ----- LOAD MODEL -----
 def load_model():
     """
     Loads the trained Keras model from cnn_model_best.hdf5.
@@ -47,7 +42,6 @@ def load_model():
         return None
 
 
-# ----- IMAGE PREPROCESSING -----
 def preprocess_image(image_file):
     """
     Converts uploaded image to array with same preprocessing used in training.
@@ -59,20 +53,16 @@ def preprocess_image(image_file):
     image = Image.open(image_file).convert("RGB")
     print(f"Original image size: {image.size}")
 
-    # Resize to model input size
     image = image.resize((IMG_SIZE, IMG_SIZE))
 
-    # Convert to array and normalize to [0, 1]
     img_array = np.array(image) / 255.0
 
-    # Add batch dimension
     img_array = np.expand_dims(img_array, axis=0)
 
     print(f"Preprocessed array shape: {img_array.shape}")
     return img_array
 
 
-# ----- PREDICTION FUNCTION -----
 def predict_image(model, image_file):
     """
     Runs inference on the uploaded image and returns the predicted class (0-4).
