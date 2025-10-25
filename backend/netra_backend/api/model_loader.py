@@ -131,31 +131,18 @@ def predict_image(model, image_file):
     """
     Runs inference on the uploaded image and returns the predicted class (0-4).
     Model outputs: 0=No DR, 1=Mild, 2=Moderate, 3=Severe, 4=Proliferative DR
-    Uses mock predictions if PyTorch is not available (for demo/testing).
     """
-    # If PyTorch is not available or model not loaded, return mock prediction
+    # If PyTorch is not available or model not loaded, raise error
     if not TORCH_AVAILABLE or model is None:
-        pred_class = random.randint(0, 4)
-        return {
-            "prediction": LABELS[pred_class],
-            "prediction_class": pred_class
-        }
+        raise RuntimeError("Model not available. PyTorch and model file required for predictions.")
 
-    try:
-        tensor = preprocess_image(image_file).to(DEVICE)
-        with torch.no_grad():
-            outputs = model(tensor)
-            pred = torch.argmax(outputs, dim=1)
-            pred_class = pred.item()
+    tensor = preprocess_image(image_file).to(DEVICE)
+    with torch.no_grad():
+        outputs = model(tensor)
+        pred = torch.argmax(outputs, dim=1)
+        pred_class = pred.item()
 
-        return {
-            "prediction": LABELS[pred_class],
-            "prediction_class": pred_class
-        }
-    except Exception as e:
-        print(f"⚠️  Prediction error: {e}. Using fallback.")
-        pred_class = random.randint(0, 4)
-        return {
-            "prediction": LABELS[pred_class],
-            "prediction_class": pred_class
-        }
+    return {
+        "prediction": LABELS[pred_class],
+        "prediction_class": pred_class
+    }
