@@ -36,7 +36,7 @@ def load_model():
             print(f"⚠️  Model file not found at {model_path}.")
             return None
 
-        model = keras.models.load_model(model_path)
+        model = keras.models.load_model(model_path, compile=False, safe_mode=False)
         print(f"✓ Model loaded successfully from {model_path}")
         print(f"Model input shape: {model.input_shape}")
         print(f"Model output shape: {model.output_shape}")
