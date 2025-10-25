@@ -19,8 +19,10 @@ interface Scan {
   patient: User;
   nurse: User;
   doctor: User;
-  ai_prediction: string;
-  ai_confidence: number | null;
+  left_eye_prediction: string | null;
+  left_eye_prediction_class: number | null;
+  right_eye_prediction: string | null;
+  right_eye_prediction_class: number | null;
   ai_details: any;
   priority: string;
   status: string;

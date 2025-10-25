@@ -64,7 +64,9 @@ class RetinalScanSerializer(serializers.ModelSerializer):
     class Meta:
         model = RetinalScan
         fields = [
-            'id', 'patient', 'nurse', 'doctor', 'ai_prediction', 'ai_confidence',
+            'id', 'patient', 'nurse', 'doctor',
+            'left_eye_prediction', 'left_eye_prediction_class',
+            'right_eye_prediction', 'right_eye_prediction_class',
             'ai_details', 'priority', 'status', 'patient_age', 'patient_diabetes_duration',
             'created_at', 'updated_at', 'images', 'doctor_notes'
         ]

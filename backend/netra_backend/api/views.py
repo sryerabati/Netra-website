@@ -125,6 +125,8 @@ def upload_scan(request):
     )
 
     image_urls = []
+    ai_results = {}
+
     if left_eye:
         result_left = predict_image(model, left_eye)
         scan_image = ScanImage.objects.create(
@@ -134,10 +136,9 @@ def upload_scan(request):
         )
         image_urls.append(scan_image.image.url)
 
-        if not scan.ai_prediction:
-            scan.ai_prediction = result_left.get('prediction')
-            scan.ai_confidence = None
-            scan.ai_details = result_left
+        scan.left_eye_prediction = result_left.get('prediction')
+        scan.left_eye_prediction_class = result_left.get('prediction_class')
+        ai_results['left_eye'] = result_left
 
     if right_eye:
         result_right = predict_image(model, right_eye)
@@ -148,11 +149,11 @@ def upload_scan(request):
         )
         image_urls.append(scan_image.image.url)
 
-        if not scan.ai_prediction:
-            scan.ai_prediction = result_right.get('prediction')
-            scan.ai_confidence = None
-            scan.ai_details = result_right
+        scan.right_eye_prediction = result_right.get('prediction')
+        scan.right_eye_prediction_class = result_right.get('prediction_class')
+        ai_results['right_eye'] = result_right
 
+    scan.ai_details = ai_results
     scan.save()
 
     serializer = RetinalScanSerializer(scan, context={'request': request})

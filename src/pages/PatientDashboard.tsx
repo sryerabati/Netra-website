@@ -225,19 +225,25 @@ export default function PatientDashboard() {
                   </div>
                 )}
 
-                {scan.ai_prediction && (
-                  <div className="mb-4 p-3 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl">
-                    <div className="flex items-center gap-2 mb-1">
+                {(scan.left_eye_prediction || scan.right_eye_prediction) && (
+                  <div className="mb-4 p-3 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl space-y-2">
+                    <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="w-4 h-4 text-blue-600" />
                       <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
                         AI Analysis
                       </span>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{scan.ai_prediction}</p>
-                    {scan.ai_confidence && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        Confidence: {(scan.ai_confidence * 100).toFixed(1)}%
-                      </p>
+                    {scan.left_eye_prediction && (
+                      <div className="text-sm">
+                        <span className="font-medium text-gray-600 dark:text-gray-400">Left Eye: </span>
+                        <span className="text-gray-700 dark:text-gray-300">{scan.left_eye_prediction}</span>
+                      </div>
+                    )}
+                    {scan.right_eye_prediction && (
+                      <div className="text-sm">
+                        <span className="font-medium text-gray-600 dark:text-gray-400">Right Eye: </span>
+                        <span className="text-gray-700 dark:text-gray-300">{scan.right_eye_prediction}</span>
+                      </div>
                     )}
                   </div>
                 )}
@@ -371,18 +377,26 @@ export default function PatientDashboard() {
                   </div>
                 ))}
 
-                {selectedScan.ai_prediction && (
+                {(selectedScan.left_eye_prediction || selectedScan.right_eye_prediction) && (
                   <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl">
-                    <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-2">
                       <TrendingUp className="w-5 h-5" />
                       AI Analysis
                     </h4>
-                    <p className="text-gray-700 dark:text-gray-300">{selectedScan.ai_prediction}</p>
-                    {selectedScan.ai_confidence && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                        Confidence: {(selectedScan.ai_confidence * 100).toFixed(1)}%
-                      </p>
-                    )}
+                    <div className="space-y-2">
+                      {selectedScan.left_eye_prediction && (
+                        <div>
+                          <span className="font-medium text-gray-600 dark:text-gray-400">Left Eye: </span>
+                          <span className="text-gray-700 dark:text-gray-300">{selectedScan.left_eye_prediction}</span>
+                        </div>
+                      )}
+                      {selectedScan.right_eye_prediction && (
+                        <div>
+                          <span className="font-medium text-gray-600 dark:text-gray-400">Right Eye: </span>
+                          <span className="text-gray-700 dark:text-gray-300">{selectedScan.right_eye_prediction}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 

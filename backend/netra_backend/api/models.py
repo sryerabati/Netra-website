@@ -66,8 +66,10 @@ class RetinalScan(models.Model):
         limit_choices_to={'role': 'doctor'}
     )
 
-    ai_prediction = models.CharField(max_length=255, blank=True, null=True)
-    ai_confidence = models.FloatField(blank=True, null=True)
+    left_eye_prediction = models.CharField(max_length=255, blank=True, null=True)
+    left_eye_prediction_class = models.IntegerField(blank=True, null=True)
+    right_eye_prediction = models.CharField(max_length=255, blank=True, null=True)
+    right_eye_prediction_class = models.IntegerField(blank=True, null=True)
     ai_details = models.JSONField(blank=True, null=True)
 
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')

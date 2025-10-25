@@ -227,11 +227,18 @@ export default function DoctorDashboard() {
                     <User className="w-4 h-4" />
                     <span>Patient: {scan.patient?.full_name}</span>
                   </div>
-                  {scan.ai_prediction && (
-                    <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                      <p className="text-xs text-purple-900 dark:text-purple-300 line-clamp-2">
-                        {scan.ai_prediction}
-                      </p>
+                  {(scan.left_eye_prediction || scan.right_eye_prediction) && (
+                    <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg space-y-1">
+                      {scan.left_eye_prediction && (
+                        <p className="text-xs text-purple-900 dark:text-purple-300">
+                          <span className="font-medium">L:</span> {scan.left_eye_prediction}
+                        </p>
+                      )}
+                      {scan.right_eye_prediction && (
+                        <p className="text-xs text-purple-900 dark:text-purple-300">
+                          <span className="font-medium">R:</span> {scan.right_eye_prediction}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -316,17 +323,25 @@ export default function DoctorDashboard() {
                   </div>
                 ))}
 
-                {selectedScan.ai_prediction && (
+                {(selectedScan.left_eye_prediction || selectedScan.right_eye_prediction) && (
                   <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl">
-                    <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-2">
+                    <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3">
                       AI Analysis
                     </h4>
-                    <p className="text-gray-700 dark:text-gray-300">{selectedScan.ai_prediction}</p>
-                    {selectedScan.ai_confidence && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                        Confidence: {(selectedScan.ai_confidence * 100).toFixed(1)}%
-                      </p>
-                    )}
+                    <div className="space-y-2">
+                      {selectedScan.left_eye_prediction && (
+                        <div>
+                          <span className="font-medium text-gray-600 dark:text-gray-400">Left Eye: </span>
+                          <span className="text-gray-700 dark:text-gray-300">{selectedScan.left_eye_prediction}</span>
+                        </div>
+                      )}
+                      {selectedScan.right_eye_prediction && (
+                        <div>
+                          <span className="font-medium text-gray-600 dark:text-gray-400">Right Eye: </span>
+                          <span className="text-gray-700 dark:text-gray-300">{selectedScan.right_eye_prediction}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
