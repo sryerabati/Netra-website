@@ -29,4 +29,9 @@ urlpatterns = [
     # Doctor features
     path('doctor/patients/', views.doctor_patients, name='doctor_patients'),
     path('doctor/patients/<int:patient_id>/history/', views.patient_scan_history, name='patient_history'),
+
+    # Admin features
+    path('admin/scans/', views.admin_all_scans, name='admin_all_scans'),
+    path('admin/scans/<int:scan_id>/delete/', views.delete_scan, name='delete_scan'),
+    path('admin/stats/', views.admin_stats, name='admin_stats'),
 ]

@@ -9,7 +9,7 @@ interface User {
   id: number;
   username: string;
   email: string;
-  role: 'patient' | 'nurse' | 'doctor';
+  role: 'patient' | 'nurse' | 'doctor' | 'admin';
   full_name: string;
   phone?: string;
 }
@@ -306,6 +306,42 @@ class DjangoAPI {
 
     if (!response.ok) {
       throw new Error('Failed to get patient history');
+    }
+
+    return response.json();
+  }
+
+  async getAdminScans(): Promise<Scan[]> {
+    const response = await fetch(`${API_URL}/admin/scans/`, {
+      headers: this.getAuthHeader(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get admin scans');
+    }
+
+    return response.json();
+  }
+
+  async deleteScan(scanId: number): Promise<void> {
+    const response = await fetch(`${API_URL}/admin/scans/${scanId}/delete/`, {
+      method: 'DELETE',
+      headers: this.getAuthHeader(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Delete failed');
+    }
+  }
+
+  async getAdminStats(): Promise<any> {
+    const response = await fetch(`${API_URL}/admin/stats/`, {
+      headers: this.getAuthHeader(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get admin stats');
     }
 
     return response.json();

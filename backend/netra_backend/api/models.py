@@ -6,6 +6,7 @@ class User(AbstractUser):
         ('patient', 'Patient'),
         ('nurse', 'Nurse'),
         ('doctor', 'Doctor'),
+        ('admin', 'Admin'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='patient')
     full_name = models.CharField(max_length=255, blank=True)

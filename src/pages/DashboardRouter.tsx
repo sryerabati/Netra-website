@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import PatientDashboard from './PatientDashboard';
 import NurseDashboard from './NurseDashboard';
 import DoctorDashboard from './DoctorDashboard';
+import AdminDashboard from './AdminDashboard';
 
 export default function DashboardRouter() {
   const { user, loading } = useAuth();
@@ -26,6 +27,8 @@ export default function DashboardRouter() {
       return <NurseDashboard />;
     case 'doctor':
       return <DoctorDashboard />;
+    case 'admin':
+      return <AdminDashboard />;
     default:
       return <Navigate to="/login" replace />;
   }

@@ -393,3 +393,63 @@ def scan_stats(request):
         'pending': pending_scans,
         'urgent': urgent_scans
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_all_scans(request):
+    """Admins can view all scans in the system"""
+    if request.user.role != 'admin':
+        return Response({'error': 'Only admins can view all scans.'}, status=403)
+
+    priority_filter = request.GET.get('priority')
+    status_filter = request.GET.get('status')
+
+    scans = RetinalScan.objects.all().prefetch_related('images', 'doctor_notes')
+
+    if priority_filter:
+        scans = scans.filter(priority=priority_filter)
+    if status_filter:
+        scans = scans.filter(status=status_filter)
+
+    serializer = RetinalScanSerializer(scans, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_scan(request, scan_id):
+    """Admins can delete any scan"""
+    if request.user.role != 'admin':
+        return Response({'error': 'Only admins can delete scans.'}, status=403)
+
+    scan = get_object_or_404(RetinalScan, id=scan_id)
+    scan.delete()
+
+    return Response({'message': 'Scan deleted successfully.'}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_stats(request):
+    """Get system-wide statistics for admins"""
+    if request.user.role != 'admin':
+        return Response({'error': 'Only admins can view system stats.'}, status=403)
+
+    total_scans = RetinalScan.objects.count()
+    total_users = User.objects.count()
+    total_patients = User.objects.filter(role='patient').count()
+    total_doctors = User.objects.filter(role='doctor').count()
+    total_nurses = User.objects.filter(role='nurse').count()
+    pending_scans = RetinalScan.objects.filter(status='pending').count()
+    urgent_scans = RetinalScan.objects.filter(priority='urgent').count()
+
+    return Response({
+        'total_scans': total_scans,
+        'total_users': total_users,
+        'total_patients': total_patients,
+        'total_doctors': total_doctors,
+        'total_nurses': total_nurses,
+        'pending_scans': pending_scans,
+        'urgent_scans': urgent_scans
+    })
