@@ -412,11 +412,18 @@ export default function NurseDashboard() {
                         <Stethoscope className="w-4 h-4" />
                         <span>Dr. {scan.doctor?.full_name}</span>
                       </div>
-                      {scan.ai_prediction && (
-                        <div className="mt-2 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                          <p className="text-xs text-emerald-900 dark:text-emerald-300 line-clamp-2">
-                            {scan.ai_prediction}
-                          </p>
+                      {(scan.left_eye_prediction || scan.right_eye_prediction) && (
+                        <div className="mt-2 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg space-y-1">
+                          {scan.left_eye_prediction && (
+                            <p className="text-xs text-emerald-900 dark:text-emerald-300">
+                              <span className="font-medium">L:</span> {scan.left_eye_prediction}
+                            </p>
+                          )}
+                          {scan.right_eye_prediction && (
+                            <p className="text-xs text-emerald-900 dark:text-emerald-300">
+                              <span className="font-medium">R:</span> {scan.right_eye_prediction}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
