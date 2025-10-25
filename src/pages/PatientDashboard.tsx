@@ -371,9 +371,14 @@ export default function PatientDashboard() {
                       alt={`${image.eye_side} eye`}
                       className="w-full h-auto"
                     />
-                    <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-2 capitalize">
-                      {image.eye_side} Eye
-                    </p>
+                    <div className="text-center mt-2 space-y-1">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
+                        {image.eye_side} Eye
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 font-mono">
+                        {image.image_filename}
+                      </p>
+                    </div>
                   </div>
                 ))}
 

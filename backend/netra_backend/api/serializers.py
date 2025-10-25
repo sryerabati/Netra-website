@@ -32,10 +32,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class ScanImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
+    image_filename = serializers.SerializerMethodField()
 
     class Meta:
         model = ScanImage
-        fields = ['id', 'image', 'image_url', 'eye_side', 'created_at']
+        fields = ['id', 'image', 'image_url', 'image_filename', 'eye_side', 'created_at']
 
     def get_image_url(self, obj):
         request = self.context.get('request')
@@ -43,6 +44,11 @@ class ScanImageSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
+        return None
+
+    def get_image_filename(self, obj):
+        if obj.image:
+            return obj.image.name.split('/')[-1]
         return None
 
 

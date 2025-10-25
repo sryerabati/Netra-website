@@ -38,6 +38,7 @@ interface ScanImage {
   id: number;
   image: string;
   image_url: string;
+  image_filename: string;
   eye_side: string;
   created_at: string;
 }
