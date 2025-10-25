@@ -1,19 +1,32 @@
 import random
 import os
 
+import numpy as np
+from PIL import Image, ImageOps
+
 try:
     import torch
     import torch.nn as nn
     from torchvision import transforms
-    from PIL import Image
     import timm
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
     print("⚠️  PyTorch not installed. Using mock predictions for demo.")
 
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    cv2 = None
+
 # ----- SETTINGS -----
 IMG_SIZE = 224
+
+# Dataset specific normalization statistics (computed from training set)
+DATASET_MEAN = [0.356, 0.233, 0.124]
+DATASET_STD = [0.276, 0.198, 0.176]
 
 # IMPORTANT: These labels MUST match the exact order used during training
 # Common DR datasets use this order (APTOS 2019, EyePACS):
@@ -112,30 +125,108 @@ def load_model():
 
 
 # ----- IMAGE PREPROCESSING -----
+def _crop_to_fundus(np_img):
+    """Detect and crop the circular fundus region from the image."""
+    green_channel = np_img[:, :, 1]
+    threshold = max(green_channel.mean() * 0.6, 12)
+    mask = green_channel > threshold
+
+    if not mask.any():
+        return np_img
+
+    coords = np.argwhere(mask)
+    y0, x0 = coords.min(axis=0)
+    y1, x1 = coords.max(axis=0)
+
+    height = y1 - y0
+    width = x1 - x0
+    side = int(max(height, width) * 1.05)
+
+    cy = (y0 + y1) // 2
+    cx = (x0 + x1) // 2
+
+    y_start = max(cy - side // 2, 0)
+    x_start = max(cx - side // 2, 0)
+    y_end = min(y_start + side, np_img.shape[0])
+    x_end = min(x_start + side, np_img.shape[1])
+
+    cropped = np_img[y_start:y_end, x_start:x_end]
+    return cropped
+
+
+def _apply_clahe(np_img):
+    if CV2_AVAILABLE:
+        lab = cv2.cvtColor(np_img, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        cl = clahe.apply(l)
+        merged = cv2.merge((cl, a, b))
+        enhanced = cv2.cvtColor(merged, cv2.COLOR_LAB2RGB)
+        return enhanced
+
+    pil_img = Image.fromarray(np_img)
+    equalized = ImageOps.equalize(pil_img)
+    return np.array(equalized)
+
+
+def _apply_gamma(np_img, gamma=1.1):
+    gamma = max(gamma, 0.01)
+    inv_gamma = 1.0 / gamma
+    table = np.array([(i / 255.0) ** inv_gamma * 255 for i in range(256)]).astype("uint8")
+    if CV2_AVAILABLE:
+        return cv2.LUT(np_img, table)
+    return table[np_img]
+
+
+def _quality_checks(np_img):
+    if CV2_AVAILABLE:
+        gray = cv2.cvtColor(np_img, cv2.COLOR_RGB2GRAY)
+        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+    else:
+        gray = np_img.mean(axis=2).astype(np.float32)
+        gy, gx = np.gradient(gray)
+        laplacian_var = (gx ** 2 + gy ** 2).mean()
+
+    blur_score = float(laplacian_var)
+    brightness = float(gray.mean())
+
+    return {
+        "blur_score": blur_score,
+        "is_blurry": bool(laplacian_var < 60.0),
+        "mean_brightness": brightness,
+        "is_too_dark": bool(brightness < 40.0),
+        "is_too_bright": bool(brightness > 210.0),
+    }
+
+
 def preprocess_image(image_file):
     """
-    Converts uploaded image to tensor with same preprocessing used in training.
-    Common retinal imaging preprocessing with center crop for circular fundus images.
+    Enhanced preprocessing tailored for retinal fundus images.
+    Returns processed tensor and quality control information.
     """
     if not TORCH_AVAILABLE:
-        return None
+        return None, {}
 
     image = Image.open(image_file).convert("RGB")
 
-    print(f"Original image size: {image.size}")
+    np_img = np.array(image)
+    np_img = _crop_to_fundus(np_img)
+    np_img = _apply_clahe(np_img)
+    np_img = _apply_gamma(np_img, gamma=1.1)
 
-    # Retinal images are often circular, so we might need center cropping
-    # This matches common diabetic retinopathy preprocessing pipelines
+    qc = _quality_checks(np_img)
+
+    processed_image = Image.fromarray(np_img)
+
     transform = transforms.Compose([
-        transforms.Resize(256),  # Resize shorter side to 256
-        transforms.CenterCrop(224),  # Center crop to 224x224 to focus on fundus
+        transforms.Resize(IMG_SIZE + 32),
+        transforms.CenterCrop(IMG_SIZE),
         transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406],
-                             [0.229, 0.224, 0.225])  # ImageNet normalization
+        transforms.Normalize(DATASET_MEAN, DATASET_STD)
     ])
-    tensor = transform(image).unsqueeze(0)
-    print(f"Preprocessed tensor shape: {tensor.shape}")
-    return tensor
+
+    tensor = transform(processed_image).unsqueeze(0)
+    return tensor, qc
 
 
 # ----- PREDICTION FUNCTION -----
@@ -148,24 +239,28 @@ def predict_image(model, image_file):
     if not TORCH_AVAILABLE or model is None:
         raise RuntimeError("Model not available. PyTorch and model file required for predictions.")
 
-    tensor = preprocess_image(image_file).to(DEVICE)
+    tensor, qc = preprocess_image(image_file)
+    tensor = tensor.to(DEVICE)
+
+    file_name = getattr(image_file, "name", "uploaded_image")
+    print(f"File: {file_name}")
+
     with torch.no_grad():
         outputs = model(tensor)
-        print(f"Model raw outputs: {outputs}")
-        print(f"Output shape: {outputs.shape}")
 
         # Apply softmax to get probabilities
         probabilities = torch.nn.functional.softmax(outputs, dim=1)
-        print(f"Probabilities: {probabilities}")
 
         pred = torch.argmax(outputs, dim=1)
         pred_class = pred.item()
-        confidence = probabilities[0][pred_class].item()
+        confidence = float(probabilities[0][pred_class].item())
 
-        print(f"Predicted class: {pred_class} ({LABELS[pred_class]})")
+        print(f"Predicted class: {pred_class}")
         print(f"Confidence: {confidence:.4f}")
 
     return {
         "prediction": LABELS[pred_class],
-        "prediction_class": pred_class
+        "prediction_class": pred_class,
+        "confidence": confidence,
+        "quality": qc
     }
