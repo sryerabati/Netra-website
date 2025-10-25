@@ -1,4 +1,5 @@
 import os
+from inspect import signature
 from typing import Optional
 
 try:
@@ -60,17 +61,47 @@ def _build_model(num_classes: int):
 def _load_state_dict(model_path: str) -> Optional[torch.nn.Module]:
     """Load the trained PyTorch model, handling different checkpoint formats."""
 
-    try:
-        checkpoint = torch.load(model_path, map_location='cpu')
-    except Exception as load_error:
-        print(f"⚠️  Could not load checkpoint with torch.load: {load_error}. Trying TorchScript.")
+    load_kwargs = {"map_location": "cpu"}
+
+    supports_weights_only = "weights_only" in signature(torch.load).parameters
+
+    if supports_weights_only:
         try:
-            model = torch.jit.load(model_path, map_location='cpu')
-            model.eval()
-            return model
-        except Exception as jit_error:
-            print(f"⚠️  Could not load TorchScript model: {jit_error}")
-            return None
+            checkpoint = torch.load(model_path, weights_only=True, **load_kwargs)
+        except TypeError:
+            # File may contain full objects (e.g. torch.nn.Module). Fall back to default loader.
+            checkpoint = torch.load(model_path, **load_kwargs)
+        except Exception as load_error:
+            print(
+                "⚠️  Could not load checkpoint safely with torch.load(weights_only=True):"
+                f" {load_error}. Falling back to standard loader."
+            )
+            try:
+                checkpoint = torch.load(model_path, **load_kwargs)
+            except Exception as unsafe_error:
+                print(
+                    "⚠️  Could not load checkpoint with torch.load:"
+                    f" {unsafe_error}."
+                )
+                checkpoint = None
+    else:
+        try:
+            checkpoint = torch.load(model_path, **load_kwargs)
+        except Exception as load_error:
+            print(f"⚠️  Could not load checkpoint with torch.load: {load_error}.")
+            checkpoint = None
+
+    if checkpoint is None:
+        # Only attempt TorchScript for files that plausibly contain scripted models.
+        if model_path.endswith((".pt", ".pth", ".ts", ".jit")):
+            print("Trying TorchScript loader as a fallback.")
+            try:
+                model = torch.jit.load(model_path, map_location='cpu')
+                model.eval()
+                return model
+            except Exception as jit_error:
+                print(f"⚠️  Could not load TorchScript model: {jit_error}")
+        return None
 
     if isinstance(checkpoint, torch.nn.Module):
         model = checkpoint
