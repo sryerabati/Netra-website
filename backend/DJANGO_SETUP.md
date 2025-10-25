@@ -24,9 +24,24 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
+
+Install the PostgreSQL client libraries that the Python driver relies on:
+
 ```bash
-pip install django djangorestframework djangorestframework-simplejwt django-cors-headers Pillow torch torchvision
+# macOS
+brew install postgresql
+
+# Debian/Ubuntu
+sudo apt-get update && sudo apt-get install -y libpq-dev
 ```
+
+Then install the Python dependencies (including the PostgreSQL driver) from the provided requirements file:
+
+```bash
+pip install -r ../requirements.txt
+```
+
+> 💡 The requirements file installs the modern `psycopg[binary]` driver. If you prefer the legacy driver, replace it with `psycopg2-binary` in `backend/requirements.txt` before running the command above.
 
 ### 4. Create migrations
 ```bash
@@ -43,6 +58,8 @@ python manage.py createsuperuser
 ```bash
 python manage.py runserver 0.0.0.0:8000
 ```
+
+> ℹ️ If you switched the database engine to PostgreSQL, rerun `python manage.py migrate` (after updating your `DATABASES` setting) and then start the server to confirm Django can connect successfully.
 
 The API will be available at `http://localhost:8000/api/`
 
