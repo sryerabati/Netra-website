@@ -151,8 +151,19 @@ def predict_image(model, image_file):
     tensor = preprocess_image(image_file).to(DEVICE)
     with torch.no_grad():
         outputs = model(tensor)
+        print(f"Model raw outputs: {outputs}")
+        print(f"Output shape: {outputs.shape}")
+
+        # Apply softmax to get probabilities
+        probabilities = torch.nn.functional.softmax(outputs, dim=1)
+        print(f"Probabilities: {probabilities}")
+
         pred = torch.argmax(outputs, dim=1)
         pred_class = pred.item()
+        confidence = probabilities[0][pred_class].item()
+
+        print(f"Predicted class: {pred_class} ({LABELS[pred_class]})")
+        print(f"Confidence: {confidence:.4f}")
 
     return {
         "prediction": LABELS[pred_class],
