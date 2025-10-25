@@ -67,7 +67,19 @@ def load_model():
 
         if 'backbone' in first_key:
             print("Detected EfficientNet architecture with custom wrapper")
-            model = timm.create_model('efficientnet_b3', pretrained=False, num_classes=5)
+
+            # Check dimensions to determine model variant
+            # B3 with width_mult 1.2: conv_stem is 40 channels (vs 32 for standard B0)
+            first_weight_shape = state_dict['backbone.conv_stem.weight'].shape
+            print(f"First conv layer shape: {first_weight_shape}")
+
+            if first_weight_shape[0] == 40:
+                print("Detected EfficientNet-B3 with width multiplier 1.2")
+                # This matches tf_efficientnet_b3 which uses width_mult=1.2
+                model = timm.create_model('tf_efficientnet_b3', pretrained=False, num_classes=5)
+            else:
+                print("Detected standard EfficientNet-B3")
+                model = timm.create_model('efficientnet_b3', pretrained=False, num_classes=5)
 
             # Map the keys from the custom wrapper to timm's structure
             new_state_dict = {}
