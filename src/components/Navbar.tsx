@@ -5,6 +5,14 @@ import { useTheme } from '../contexts/ThemeContext';
 export const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
 
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+    e.preventDefault();
+    const element = document.getElementById(targetId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <motion.nav
       initial={{ y: -100, opacity: 0 }}
@@ -25,18 +33,21 @@ export const Navbar = () => {
             <div className="hidden md:flex items-center gap-8">
               <a
                 href="#home"
+                onClick={(e) => handleNavClick(e, 'home')}
                 className="text-sm font-medium text-light-text/70 dark:text-dark-text/70 hover:text-light-accent dark:hover:text-dark-accent transition-colors"
               >
                 Home
               </a>
               <a
                 href="#about"
+                onClick={(e) => handleNavClick(e, 'about')}
                 className="text-sm font-medium text-light-text/70 dark:text-dark-text/70 hover:text-light-accent dark:hover:text-dark-accent transition-colors"
               >
                 About
               </a>
               <a
                 href="#how-it-works"
+                onClick={(e) => handleNavClick(e, 'how-it-works')}
                 className="text-sm font-medium text-light-text/70 dark:text-dark-text/70 hover:text-light-accent dark:hover:text-dark-accent transition-colors"
               >
                 How It Works

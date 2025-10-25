@@ -43,22 +43,24 @@ function App() {
       <Navbar />
 
       <main className="pt-32 pb-12 px-6">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-5xl md:text-6xl font-bold text-light-text dark:text-dark-text mb-4">
-            Netra
-          </h1>
-          <p className="text-xl text-light-text/70 dark:text-dark-text/70 max-w-2xl mx-auto">
-            AI-Powered Retinal Fundus Image Analysis
-          </p>
-          <p className="text-sm text-light-text/50 dark:text-dark-text/50 mt-2">
-            Advanced diabetic eye disease detection using deep learning
-          </p>
-        </motion.div>
+        <section id="home">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <h1 className="text-5xl md:text-6xl font-bold text-light-text dark:text-dark-text mb-4">
+              Netra
+            </h1>
+            <p className="text-xl text-light-text/70 dark:text-dark-text/70 max-w-2xl mx-auto">
+              AI-Powered Retinal Fundus Image Analysis
+            </p>
+            <p className="text-sm text-light-text/50 dark:text-dark-text/50 mt-2">
+              Advanced diabetic eye disease detection using deep learning
+            </p>
+          </motion.div>
+        </section>
 
         <UploadCard
           onImageSelect={setSelectedImage}
