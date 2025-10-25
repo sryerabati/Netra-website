@@ -14,7 +14,14 @@ except ImportError:
 
 # ----- SETTINGS -----
 IMG_SIZE = 224
+
+# IMPORTANT: These labels MUST match the exact order used during training
+# Common DR datasets use this order (APTOS 2019, EyePACS):
+# 0 = No DR, 1 = Mild, 2 = Moderate, 3 = Severe, 4 = Proliferative DR
 LABELS = ['No DR', 'Mild', 'Moderate', 'Severe', 'Proliferative DR']
+
+# If your training used a different order, update LABELS accordingly
+# Some datasets use reverse order: [4=Proliferative, 3=Severe, 2=Moderate, 1=Mild, 0=No DR]
 
 if TORCH_AVAILABLE:
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -39,19 +46,30 @@ def load_model():
             print(f"⚠️  Model file not found at {model_path}. Using mock predictions.")
             return None
 
-        checkpoint = torch.load(model_path, map_location=DEVICE)
+        checkpoint = torch.load(model_path, map_location=DEVICE, weights_only=False)
 
-        if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
-            state_dict = checkpoint['state_dict']
+        # Check if this is a full checkpoint with metadata
+        if isinstance(checkpoint, dict):
+            print(f"Checkpoint keys: {checkpoint.keys()}")
+            if 'state_dict' in checkpoint:
+                state_dict = checkpoint['state_dict']
+            elif 'model_state_dict' in checkpoint:
+                state_dict = checkpoint['model_state_dict']
+            elif 'model' in checkpoint:
+                state_dict = checkpoint['model']
+            else:
+                state_dict = checkpoint
         else:
             state_dict = checkpoint
 
         first_key = list(state_dict.keys())[0]
+        print(f"First model key: {first_key}")
 
         if 'backbone' in first_key:
-            print("Detected EfficientNet architecture")
+            print("Detected EfficientNet architecture with custom wrapper")
             model = timm.create_model('efficientnet_b0', pretrained=False, num_classes=5)
 
+            # Map the keys from the custom wrapper to timm's structure
             new_state_dict = {}
             for key, value in state_dict.items():
                 if key.startswith('backbone.'):
@@ -61,11 +79,15 @@ def load_model():
                     new_key = key.replace('head.', 'classifier.')
                     new_state_dict[new_key] = value
 
-            model.load_state_dict(new_state_dict, strict=False)
+            missing_keys, unexpected_keys = model.load_state_dict(new_state_dict, strict=False)
+            if missing_keys:
+                print(f"Missing keys (will use random init): {missing_keys[:5]}...")
+            if unexpected_keys:
+                print(f"Unexpected keys (ignored): {unexpected_keys[:5]}...")
         else:
             print("Detected standard architecture, loading directly")
             model = timm.create_model('efficientnet_b0', pretrained=False, num_classes=5)
-            model.load_state_dict(state_dict)
+            model.load_state_dict(state_dict, strict=False)
 
         model.eval()
         model.to(DEVICE)
@@ -81,19 +103,27 @@ def load_model():
 def preprocess_image(image_file):
     """
     Converts uploaded image to tensor with same preprocessing used in training.
+    Common retinal imaging preprocessing with center crop for circular fundus images.
     """
     if not TORCH_AVAILABLE:
         return None
 
     image = Image.open(image_file).convert("RGB")
 
+    print(f"Original image size: {image.size}")
+
+    # Retinal images are often circular, so we might need center cropping
+    # This matches common diabetic retinopathy preprocessing pipelines
     transform = transforms.Compose([
-        transforms.Resize((IMG_SIZE, IMG_SIZE)),
+        transforms.Resize(256),  # Resize shorter side to 256
+        transforms.CenterCrop(224),  # Center crop to 224x224 to focus on fundus
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406],
                              [0.229, 0.224, 0.225])  # ImageNet normalization
     ])
-    return transform(image).unsqueeze(0)  # Shape: (1, 3, 224, 224)
+    tensor = transform(image).unsqueeze(0)
+    print(f"Preprocessed tensor shape: {tensor.shape}")
+    return tensor
 
 
 # ----- PREDICTION FUNCTION -----
