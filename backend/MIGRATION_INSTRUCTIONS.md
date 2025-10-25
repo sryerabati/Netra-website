@@ -63,6 +63,39 @@ The API now returns:
 }
 ```
 
+## Installing PyTorch and AI Model Dependencies
+
+To use **real AI predictions** instead of mock predictions, you need to install PyTorch and related libraries:
+
+1. **Install PyTorch and dependencies:**
+   ```bash
+   pip install torch torchvision pillow timm
+   ```
+
+   Note: `timm` is the PyTorch Image Models library required for EfficientNet architecture.
+
+2. **Verify the model file exists:**
+   The trained model should be at:
+   ```
+   backend/netra_backend/api/netra_dr_best.pth
+   ```
+
+3. **Restart the Django server:**
+   ```bash
+   python manage.py runserver
+   ```
+
+4. **Check for successful model loading:**
+   You should see in the console:
+   ```
+   ✓ Model loaded successfully from [path]/netra_dr_best.pth
+   ```
+
+   If you see this warning, you're still using mock predictions:
+   ```
+   ⚠️  Could not load model: ... Using mock predictions.
+   ```
+
 ## Troubleshooting
 
 If you still get errors after migration:
@@ -84,3 +117,9 @@ If you still get errors after migration:
    ```
 
 4. **Check the Django logs** in the terminal where you ran `runserver` for detailed error messages
+
+5. **Verify PyTorch installation:**
+   ```bash
+   python -c "import torch; print(torch.__version__)"
+   python -c "import timm; print(timm.__version__)"
+   ```

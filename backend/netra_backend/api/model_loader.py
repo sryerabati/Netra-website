@@ -4,8 +4,9 @@ import os
 try:
     import torch
     import torch.nn as nn
-    from torchvision import models, transforms
+    from torchvision import transforms
     from PIL import Image
+    import timm
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -25,7 +26,7 @@ else:
 def load_model():
     """
     Loads the trained PyTorch model from netra_dr_best.pth.
-    Uses MobileNetV2 architecture fine-tuned for 5 classes.
+    Uses EfficientNet architecture fine-tuned for 5 classes.
     """
     if not TORCH_AVAILABLE:
         print("⚠️  PyTorch not available. Using mock predictions.")
@@ -38,12 +39,34 @@ def load_model():
             print(f"⚠️  Model file not found at {model_path}. Using mock predictions.")
             return None
 
-        # MobileNetV2 architecture for 5-class classification
-        model = models.mobilenet_v2(weights=None)
-        model.classifier[1] = nn.Linear(model.last_channel, 5)
+        checkpoint = torch.load(model_path, map_location=DEVICE)
 
-        # Load the trained weights
-        model.load_state_dict(torch.load(model_path, map_location=DEVICE))
+        if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
+            state_dict = checkpoint['state_dict']
+        else:
+            state_dict = checkpoint
+
+        first_key = list(state_dict.keys())[0]
+
+        if 'backbone' in first_key:
+            print("Detected EfficientNet architecture")
+            model = timm.create_model('efficientnet_b0', pretrained=False, num_classes=5)
+
+            new_state_dict = {}
+            for key, value in state_dict.items():
+                if key.startswith('backbone.'):
+                    new_key = key.replace('backbone.', '')
+                    new_state_dict[new_key] = value
+                elif key.startswith('head.'):
+                    new_key = key.replace('head.', 'classifier.')
+                    new_state_dict[new_key] = value
+
+            model.load_state_dict(new_state_dict, strict=False)
+        else:
+            print("Detected standard architecture, loading directly")
+            model = timm.create_model('efficientnet_b0', pretrained=False, num_classes=5)
+            model.load_state_dict(state_dict)
+
         model.eval()
         model.to(DEVICE)
 

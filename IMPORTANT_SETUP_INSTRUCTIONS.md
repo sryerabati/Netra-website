@@ -1,280 +1,93 @@
-# ⚠️ IMPORTANT: Django Backend Setup Required
+# IMPORTANT: AI Model Setup Instructions
 
 ## Current Status
 
-The **frontend React app is built and ready** ✅
-The **Django backend code is complete** ✅
-**BUT** Django needs to be installed and started separately ❗
+Your model file (`netra_dr_best.pth`) uses **EfficientNet architecture**, but the system was trying to load it as MobileNetV2. This has been fixed.
 
-## Why "Failed to Fetch"?
+## What Was Changed
 
-The frontend is trying to connect to `http://localhost:8000/api` but Django isn't running yet.
+The `model_loader.py` file has been updated to:
+1. Use `timm` library instead of torchvision models
+2. Load EfficientNet-B0 architecture
+3. Map the checkpoint keys from `backbone.*` and `head.*` to the correct EfficientNet structure
 
----
+## Required Installation
 
-## 🚀 Quick Fix: Start Django Backend
-
-### Step 1: Open a New Terminal
-
-Open a **separate terminal window** and navigate to the backend folder:
+To use **real AI predictions** instead of mock predictions, install these dependencies:
 
 ```bash
 cd backend/netra_backend
+pip install torch torchvision pillow timm
 ```
 
-### Step 2: Install Django (First Time Only)
+**What each library does:**
+- `torch`: PyTorch deep learning framework
+- `torchvision`: Computer vision utilities
+- `pillow`: Image processing (for loading retinal scan images)
+- `timm`: PyTorch Image Models (provides EfficientNet-B0)
 
-```bash
-# Install Django and dependencies
-pip install django djangorestframework djangorestframework-simplejwt django-cors-headers Pillow
+## After Installation
 
-# If pip3 is required instead:
-pip3 install django djangorestframework djangorestframework-simplejwt django-cors-headers Pillow
+1. **Restart Django server:**
+   ```bash
+   python manage.py runserver
+   ```
+
+2. **Check console output:**
+
+   **✅ Success - Real AI predictions:**
+   ```
+   Detected EfficientNet architecture
+   ✓ Model loaded successfully from [path]/netra_dr_best.pth
+   ```
+
+   **⚠️ Still using mock predictions:**
+   ```
+   ⚠️  Could not load model: ... Using mock predictions.
+   ```
+
+## How It Works
+
+### Without PyTorch/timm:
+- Returns **random** predictions (0-4)
+- Useful for testing UI and workflow
+- **Not suitable for medical use**
+
+### With PyTorch/timm:
+- Loads the trained EfficientNet model
+- Processes each eye image separately
+- Returns real predictions based on retinal features:
+  - **0**: No DR
+  - **1**: Mild
+  - **2**: Moderate
+  - **3**: Severe
+  - **4**: Proliferative DR
+
+## Model File Location
+
+The model file should be at:
+```
+backend/netra_backend/api/netra_dr_best.pth
 ```
 
-### Step 3: Set Up Database (First Time Only)
+This file contains the trained weights from your EfficientNet model.
 
-```bash
-# Create database tables
-python manage.py makemigrations
-python manage.py migrate
+## Verification
 
-# Create admin user (optional but recommended)
-python manage.py createsuperuser
-# Follow prompts to create username/password
-```
+To verify everything is working:
 
-### Step 4: Start Django Server
+1. **Check PyTorch installation:**
+   ```bash
+   python -c "import torch; print('PyTorch:', torch.__version__)"
+   ```
 
-```bash
-# Start the backend server
-python manage.py runserver 0.0.0.0:8000
-```
+2. **Check timm installation:**
+   ```bash
+   python -c "import timm; print('timm:', timm.__version__)"
+   ```
 
-You should see:
-```
-Starting development server at http://0.0.0.0:8000/
-```
-
-### Step 5: Keep Django Running
-
-**Important:** Keep this terminal window open with Django running!
-
----
-
-## 🧪 Test the Backend
-
-Once Django is running, test it:
-
-```bash
-# In a new terminal, test if API is working:
-curl http://localhost:8000/api/users/patient/
-
-# You should see: {"detail":"Authentication credentials were not provided."}
-# This is normal - it means the API is working!
-```
-
----
-
-## 📱 Now Use the Frontend
-
-With Django running:
-
-1. **Frontend is already running** at `http://localhost:5173/`
-2. Go to **http://localhost:5173/signup**
-3. Create an account (choose role: patient, nurse, or doctor)
-4. Login and explore your dashboard!
-
----
-
-## 🔄 Complete Workflow to Test
-
-### 1️⃣ Create Users (Signup Page)
-
-Create 3 test accounts at `http://localhost:5173/signup`:
-
-**Patient:**
-- Username: `patient1`
-- Email: `patient@test.com`
-- Password: `test123`
-- Full Name: `John Patient`
-- Role: `Patient`
-
-**Nurse:**
-- Username: `nurse1`
-- Email: `nurse@test.com`
-- Password: `test123`
-- Full Name: `Jane Nurse`
-- Role: `Nurse`
-
-**Doctor:**
-- Username: `doctor1`
-- Email: `doctor@test.com`
-- Password: `test123`
-- Full Name: `Dr. Smith`
-- Role: `Doctor`
-
-### 2️⃣ Patient Subscribes to Doctor
-
-1. Login as **patient1**
-2. Click "Add Doctor"
-3. Subscribe to Dr. Smith
-4. You'll see the doctor in "My Doctors" section
-
-### 3️⃣ Nurse Uploads Scans
-
-1. Logout and login as **nurse1**
-2. Go to "Upload Scan" tab
-3. Select patient: `John Patient`
-4. Assign to doctor: `Dr. Smith`
-5. Upload left/right eye images (any image file works for testing)
-6. Click "Upload & Analyze Scan"
-7. ✅ Scan is uploaded and AI analyzes it automatically
-
-### 4️⃣ Doctor Reviews Scan
-
-1. Logout and login as **doctor1**
-2. You'll see the scan in your dashboard
-3. Click on the scan to review
-4. Update priority: `High` or `Urgent`
-5. Update status: `Reviewed`
-6. Add a note: "Patient shows signs of moderate DR. Schedule follow-up."
-7. Click "Add Note"
-
-### 5️⃣ Patient Views Results
-
-1. Logout and login as **patient1**
-2. View your scans in "My Scans"
-3. Click on a scan to see:
-   - Retina images
-   - AI prediction
-   - Doctor's notes
-   - Priority and status
-
----
-
-## 🐛 Troubleshooting
-
-### "Failed to Fetch" Error
-
-**Cause:** Django backend is not running
-
-**Solution:**
-```bash
-cd backend/netra_backend
-python manage.py runserver 0.0.0.0:8000
-```
-
-### "Port 8000 already in use"
-
-**Solution:**
-```bash
-# Find and kill the process
-lsof -ti:8000 | xargs kill -9
-
-# Or use a different port
-python manage.py runserver 8001
-
-# Then update frontend .env:
-VITE_DJANGO_API_URL=http://localhost:8001/api
-```
-
-### Django not found
-
-**Solution:**
-```bash
-pip install django djangorestframework djangorestframework-simplejwt django-cors-headers Pillow
-```
-
-### Can't create migrations
-
-**Solution:**
-```bash
-# Delete old database and start fresh
-rm db.sqlite3
-rm -rf api/migrations/000*
-python manage.py makemigrations
-python manage.py migrate
-```
-
----
-
-## 📚 API Documentation
-
-Once Django is running, you can test API endpoints:
-
-### Register a User
-```bash
-curl -X POST http://localhost:8000/api/register/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "email": "test@example.com",
-    "password": "test123",
-    "full_name": "Test User",
-    "role": "patient"
-  }'
-```
-
-### Login
-```bash
-curl -X POST http://localhost:8000/api/login/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "password": "test123"
-  }'
-```
-
-This returns JWT tokens that the frontend uses automatically.
-
----
-
-## 🎯 Summary
-
-**Two Servers Must Run:**
-
-1. **Django Backend** (Terminal 1)
+3. **Test model loading:**
    ```bash
    cd backend/netra_backend
-   python manage.py runserver 0.0.0.0:8000
+   python -c "from api.model_loader import load_model; model = load_model(); print('Model loaded:', model is not None)"
    ```
-
-2. **React Frontend** (Terminal 2 - already running)
-   ```bash
-   npm run dev
-   ```
-
-Keep both terminals open while using the app!
-
----
-
-## 🚀 Quick Start Commands
-
-```bash
-# Terminal 1 - Django Backend
-cd backend/netra_backend
-pip install django djangorestframework djangorestframework-simplejwt django-cors-headers Pillow
-python manage.py makemigrations
-python manage.py migrate
-python manage.py runserver 0.0.0.0:8000
-
-# Terminal 2 - React Frontend (already done)
-npm run dev
-```
-
-Visit: **http://localhost:5173/**
-
----
-
-## ✅ When Everything Works
-
-You'll see:
-- ✅ No "Failed to Fetch" errors
-- ✅ Can signup and login
-- ✅ Patient, Nurse, and Doctor dashboards working
-- ✅ Can upload scans
-- ✅ Can review scans
-- ✅ Can add notes
-
-Ready to go! 🎉
