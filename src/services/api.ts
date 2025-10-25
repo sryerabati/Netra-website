@@ -4,7 +4,7 @@ interface AnalysisResult {
   heatmapUrl?: string;
 }
 
-export const analyzeImage = async (file: File): Promise<AnalysisResult> => {
+export const analyzeImage = async (_file: File): Promise<AnalysisResult> => {
   return new Promise((resolve) => {
     setTimeout(() => {
       const predictions = [
