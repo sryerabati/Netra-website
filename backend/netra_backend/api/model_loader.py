@@ -179,8 +179,6 @@ def _apply_gamma(np_img, gamma=1.1):
 
 
 def _quality_checks(np_img):
-    qc = {}
-
     if CV2_AVAILABLE:
         gray = cv2.cvtColor(np_img, cv2.COLOR_RGB2GRAY)
         laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
@@ -189,15 +187,16 @@ def _quality_checks(np_img):
         gy, gx = np.gradient(gray)
         laplacian_var = (gx ** 2 + gy ** 2).mean()
 
-    qc["blur_score"] = float(laplacian_var)
-    qc["is_blurry"] = laplacian_var < 60.0
-
+    blur_score = float(laplacian_var)
     brightness = float(gray.mean())
-    qc["mean_brightness"] = brightness
-    qc["is_too_dark"] = brightness < 40.0
-    qc["is_too_bright"] = brightness > 210.0
 
-    return qc
+    return {
+        "blur_score": blur_score,
+        "is_blurry": bool(laplacian_var < 60.0),
+        "mean_brightness": brightness,
+        "is_too_dark": bool(brightness < 40.0),
+        "is_too_bright": bool(brightness > 210.0),
+    }
 
 
 def preprocess_image(image_file):
@@ -254,7 +253,7 @@ def predict_image(model, image_file):
 
         pred = torch.argmax(outputs, dim=1)
         pred_class = pred.item()
-        confidence = probabilities[0][pred_class].item()
+        confidence = float(probabilities[0][pred_class].item())
 
         print(f"Predicted class: {LABELS[pred_class]}")
         print(f"Confidence: {confidence:.4f}")
@@ -262,5 +261,6 @@ def predict_image(model, image_file):
     return {
         "prediction": LABELS[pred_class],
         "prediction_class": pred_class,
+        "confidence": confidence,
         "quality": qc
     }
