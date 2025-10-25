@@ -22,3 +22,4 @@ dist-ssr
 *.sw?
 .env
 /backend/netra_backend/api/__pycache__
+/backend/netra_backend/api/__pycache__
