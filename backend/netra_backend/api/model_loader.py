@@ -1,5 +1,6 @@
 import random
 import os
+import time
 
 try:
     import torch
@@ -141,6 +142,7 @@ def predict_image(model, image_file):
 
     tensor = preprocess_image(image_file).to(DEVICE)
     attempt = 0
+    start_time = time.time()
 
     while True:
         attempt += 1
@@ -163,6 +165,14 @@ def predict_image(model, image_file):
                 break
 
             print("Confidence below 70%, rerunning inference with the same raw image.")
+
+            elapsed = time.time() - start_time
+            if elapsed >= 10:
+                print(
+                    "Confidence threshold not met within 10 seconds. "
+                    "Returning the most recent prediction."
+                )
+                break
 
     return {
         "prediction": LABELS[pred_class],
