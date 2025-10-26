@@ -1,12 +1,13 @@
 import random
 import os
+import time
 
 try:
     import torch
     import torch.nn as nn
-    from torchvision import transforms
     from PIL import Image
     import timm
+    import numpy as np
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -114,27 +115,18 @@ def load_model():
 # ----- IMAGE PREPROCESSING -----
 def preprocess_image(image_file):
     """
-    Converts uploaded image to tensor with same preprocessing used in training.
-    Common retinal imaging preprocessing with center crop for circular fundus images.
+    Loads the uploaded image and converts it directly to a tensor without
+    applying any preprocessing so the raw pixel data is fed to the model.
     """
     if not TORCH_AVAILABLE:
         return None
 
     image = Image.open(image_file).convert("RGB")
-
     print(f"Original image size: {image.size}")
 
-    # Retinal images are often circular, so we might need center cropping
-    # This matches common diabetic retinopathy preprocessing pipelines
-    transform = transforms.Compose([
-        transforms.Resize(256),  # Resize shorter side to 256
-        transforms.CenterCrop(224),  # Center crop to 224x224 to focus on fundus
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406],
-                             [0.229, 0.224, 0.225])  # ImageNet normalization
-    ])
-    tensor = transform(image).unsqueeze(0)
-    print(f"Preprocessed tensor shape: {tensor.shape}")
+    array = np.array(image)
+    tensor = torch.from_numpy(array).permute(2, 0, 1).unsqueeze(0).float()
+    print(f"Raw tensor shape: {tensor.shape}")
     return tensor
 
 
@@ -149,21 +141,38 @@ def predict_image(model, image_file):
         raise RuntimeError("Model not available. PyTorch and model file required for predictions.")
 
     tensor = preprocess_image(image_file).to(DEVICE)
-    with torch.no_grad():
-        outputs = model(tensor)
-        print(f"Model raw outputs: {outputs}")
-        print(f"Output shape: {outputs.shape}")
+    attempt = 0
+    start_time = time.time()
 
-        # Apply softmax to get probabilities
-        probabilities = torch.nn.functional.softmax(outputs, dim=1)
-        print(f"Probabilities: {probabilities}")
+    while True:
+        attempt += 1
+        with torch.no_grad():
+            outputs = model(tensor)
+            print(f"Model raw outputs (attempt {attempt}): {outputs}")
+            print(f"Output shape: {outputs.shape}")
 
-        pred = torch.argmax(outputs, dim=1)
-        pred_class = pred.item()
-        confidence = probabilities[0][pred_class].item()
+            probabilities = torch.nn.functional.softmax(outputs, dim=1)
+            print(f"Probabilities (attempt {attempt}): {probabilities}")
 
-        print(f"Predicted class: {pred_class} ({LABELS[pred_class]})")
-        print(f"Confidence: {confidence:.4f}")
+            pred = torch.argmax(outputs, dim=1)
+            pred_class = pred.item()
+            confidence = probabilities[0][pred_class].item()
+
+            print(f"Predicted class: {pred_class} ({LABELS[pred_class]})")
+            print(f"Confidence: {confidence:.4f}")
+
+            if confidence >= 0.70:
+                break
+
+            print("Confidence below 70%, rerunning inference with the same raw image.")
+
+            elapsed = time.time() - start_time
+            if elapsed >= 10:
+                print(
+                    "Confidence threshold not met within 10 seconds. "
+                    "Returning the most recent prediction."
+                )
+                break
 
     return {
         "prediction": LABELS[pred_class],
