@@ -26,7 +26,7 @@ AUTH_USER_MODEL = 'api.User'
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-boc36g+)*r3(py0g6hp)v*%-cd*4qyna%_k%g=avgl5+obs%d#')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in {'1', 'true', 'yes'}
+DEBUG = os.getenv('DJANGO_DEBUG', '0').lower() in {'1', 'true', 'yes'}
 
 DEFAULT_ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'netrapp.tech', 'www.netrapp.tech']
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', default=DEFAULT_ALLOWED_HOSTS)
