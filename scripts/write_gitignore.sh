@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
+cd "$repo_root"
+
+cat <<'EOF' > .gitignore
 # Logs
 logs/
 *.log
@@ -95,3 +103,6 @@ backend/**/local_settings.py
 
 # Backend specific caches
 backend/netra_backend/api/__pycache__/
+EOF
+
+echo "Wrote .gitignore with frontend and backend ignores."
