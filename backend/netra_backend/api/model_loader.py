@@ -68,7 +68,12 @@ def load_model():
             return MockPredictor(LABELS)
 
         print(f"Loading retinal model from {model_path} on {DEVICE or 'CPU'}...")
-        checkpoint = torch.load(model_path, map_location=DEVICE or 'cpu', weights_only=False)
+        # ``weights_only`` was added in newer versions of PyTorch.  Passing it on
+        # older installations (like the one running in production) raises a
+        # ``TypeError`` which bubbles up as a 500 response when the module is
+        # imported.  To keep backwards compatibility we simply rely on the
+        # default behaviour and avoid passing the flag altogether.
+        checkpoint = torch.load(model_path, map_location=DEVICE or 'cpu')
 
         # Check if this is a full checkpoint with metadata
         if isinstance(checkpoint, dict):
