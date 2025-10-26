@@ -24,25 +24,57 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
+
+Install the PostgreSQL client libraries that the Python driver relies on:
+
 ```bash
-pip install django djangorestframework djangorestframework-simplejwt django-cors-headers Pillow torch torchvision
+# macOS
+brew install postgresql
+
+# Debian/Ubuntu
+sudo apt-get update && sudo apt-get install -y libpq-dev
 ```
 
-### 4. Create migrations
+Then install the Python dependencies (including the PostgreSQL driver) from the provided requirements file:
+
+```bash
+pip install -r ../requirements.txt
+```
+
+> 💡 The requirements file installs the modern `psycopg[binary]` driver. If you prefer the legacy driver, replace it with `psycopg2-binary` in `backend/requirements.txt` before running the command above.
+
+### 4. Provision the PostgreSQL database
+```bash
+psql -U postgres -c "CREATE ROLE netra_user WITH LOGIN PASSWORD 'netra_pass';"
+psql -U postgres -c "CREATE DATABASE netra_db OWNER netra_user;"
+```
+
+If you prefer different credentials, feel free to substitute your own role name, password, or database name. Just remember to update the corresponding values in `backend/netra_backend/netra_backend/settings.py` under the `DATABASES['default']` configuration so Django can connect with the new credentials.
+
+### 5. Verify database access
+```bash
+psql -h localhost -U netra_user netra_db
+```
+
+If the connection succeeds, exit `psql` with `\q` and continue. If you changed the credentials in the previous step, use the matching username, password, and database name here as well.
+
+### 6. Create migrations
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 5. Create superuser (admin)
+### 7. Create superuser (admin)
 ```bash
 python manage.py createsuperuser
 ```
 
-### 6. Run the server
+### 8. Run the server
 ```bash
 python manage.py runserver 0.0.0.0:8000
 ```
+
+> ℹ️ If you switched the database engine to PostgreSQL, rerun `python manage.py migrate` (after updating your `DATABASES` setting) and then start the server to confirm Django can connect successfully.
 
 The API will be available at `http://localhost:8000/api/`
 
